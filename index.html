@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>英単語 品詞判別クイズ｜TOEICレベル別</title>
+<style>
+  :root{
+    --bg:#0f172a;
+    --panel:#1e293b;
+    --panel-2:#334155;
+    --accent:#38bdf8;
+    --accent-2:#a78bfa;
+    --ok:#22c55e;
+    --ng:#ef4444;
+    --text:#e2e8f0;
+    --muted:#94a3b8;
+    --border:#475569;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:linear-gradient(180deg,#0b1224,#0f172a);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,sans-serif;}
+  .wrap{max-width:780px;margin:0 auto;padding:24px 16px 80px;}
+  header{text-align:center;margin-bottom:24px;}
+  header h1{font-size:24px;margin:0 0 6px;letter-spacing:.02em;}
+  header p{margin:0;color:var(--muted);font-size:13px;}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:20px;margin-bottom:16px;box-shadow:0 10px 25px rgba(0,0,0,.2);}
+  .levels{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;}
+  .level-btn{position:relative;background:var(--panel-2);border:1px solid var(--border);color:var(--text);padding:16px;border-radius:12px;cursor:pointer;font-size:15px;transition:all .15s;text-align:left;}
+  .level-btn:hover{border-color:var(--accent);transform:translateY(-2px);}
+  .level-btn .lv{display:block;font-size:12px;color:var(--muted);margin-bottom:4px;}
+  .level-btn .title{font-weight:700;font-size:16px;}
+  .level-btn .desc{font-size:12px;color:var(--muted);margin-top:6px;}
+  .level-btn.locked{opacity:.5;cursor:not-allowed;}
+  .level-btn.cleared::after{content:"✓ クリア";position:absolute;top:8px;right:10px;font-size:11px;color:var(--ok);}
+
+  .meta{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;color:var(--muted);font-size:13px;}
+  .progress{height:8px;background:#0b1224;border-radius:4px;overflow:hidden;}
+  .progress .bar{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent-2));width:0%;transition:width .2s;}
+
+  .word{font-size:44px;font-weight:700;text-align:center;margin:24px 0 4px;letter-spacing:.02em;word-break:break-word;}
+  .hint{text-align:center;color:var(--muted);font-size:13px;margin-bottom:20px;}
+  .choices{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;}
+  @media (max-width:480px){.choices{grid-template-columns:1fr;}}
+  .choice{background:var(--panel-2);border:2px solid var(--border);color:var(--text);padding:14px;border-radius:12px;cursor:pointer;font-size:15px;transition:all .12s;text-align:left;}
+  .choice:hover:not(:disabled){border-color:var(--accent);}
+  .choice:disabled{cursor:default;}
+  .choice.correct{background:rgba(34,197,94,.15);border-color:var(--ok);}
+  .choice.wrong{background:rgba(239,68,68,.15);border-color:var(--ng);}
+  .choice .pos-ja{font-size:12px;color:var(--muted);display:block;margin-top:4px;}
+
+  .footer-btn{display:flex;gap:10px;margin-top:18px;}
+  .btn{flex:1;padding:12px;border-radius:10px;border:none;cursor:pointer;font-size:14px;font-weight:600;transition:opacity .15s;}
+  .btn.primary{background:linear-gradient(90deg,var(--accent),var(--accent-2));color:#0b1224;}
+  .btn.ghost{background:transparent;border:1px solid var(--border);color:var(--text);}
+  .btn:hover{opacity:.85;}
+
+  .feedback{margin-top:14px;padding:12px;border-radius:10px;font-size:14px;display:none;}
+  .feedback.ok{background:rgba(34,197,94,.1);border:1px solid var(--ok);color:#bbf7d0;}
+  .feedback.ng{background:rgba(239,68,68,.1);border:1px solid var(--ng);color:#fecaca;}
+  .feedback.show{display:block;}
+  .feedback small{color:var(--muted);display:block;margin-top:4px;font-size:12px;}
+
+  .score{font-size:48px;font-weight:700;text-align:center;background:linear-gradient(90deg,var(--accent),var(--accent-2));-webkit-background-clip:text;background-clip:text;color:transparent;margin:12px 0;}
+  .review{margin-top:14px;}
+  .review h3{font-size:15px;margin:0 0 8px;}
+  .review ul{list-style:none;padding:0;margin:0;max-height:260px;overflow-y:auto;}
+  .review li{padding:8px;border:1px solid var(--border);border-radius:8px;margin-bottom:6px;font-size:13px;display:flex;justify-content:space-between;gap:8px;}
+  .review li b{color:#fecaca;}
+  .review li span{color:var(--muted);}
+
+  details{background:#0b1224;border:1px solid var(--border);border-radius:10px;padding:10px 14px;margin-top:16px;}
+  details summary{cursor:pointer;font-size:13px;color:var(--muted);}
+  details p,details li{font-size:13px;color:var(--text);line-height:1.7;}
+
+  .stars{display:inline-flex;gap:2px;color:#fbbf24;font-size:12px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>英単語 品詞判別クイズ</h1>
+    <p>TOEICレベル別・全5段階のステップアップ式</p>
+  </header>
+
+  <!-- レベル選択 -->
+  <section id="screen-home" class="card">
+    <h2 style="margin-top:0;font-size:17px;">レベルを選んでください</h2>
+    <div class="levels" id="levelList"></div>
+    <details>
+      <summary>品詞を見分けるコツ（接尾辞でほぼ判別できる）</summary>
+      <p>英単語の多くは<strong>語尾（接尾辞）</strong>で品詞が見分けられます。これを覚えるのが最速ルートです。</p>
+      <ul>
+        <li><b>名詞</b>：-tion / -sion / -ment / -ness / -ity / -er / -or / -ist / -ance / -ence<br>
+          例：information, decision, development, happiness, ability, teacher, actor, artist</li>
+        <li><b>動詞</b>：-ize / -ise / -ify / -ate / -en<br>
+          例：realize, classify, communicate, strengthen</li>
+        <li><b>形容詞</b>：-ful / -less / -ous / -ive / -al / -ic / -able / -ible / -ant / -ent<br>
+          例：useful, careless, famous, active, natural, economic, reliable</li>
+        <li><b>副詞</b>：-ly（ただし friendly, lovely は形容詞なので注意）<br>
+          例：quickly, carefully, immediately</li>
+      </ul>
+      <p style="color:var(--muted);font-size:12px;margin-bottom:0;">※レベル区分は市販教材で頻出する単語を目安として分類したもので、ETS公式の分類ではありません。</p>
+    </details>
+    <details>
+      <summary>💡 プログラミング学習アドバイス（クリックで開く）</summary>
+      <p>このアプリはHTML/CSS/JavaScriptの3つだけで作られています。ソース（右クリック→ページのソース表示）を読んでみると勉強になります。</p>
+      <ul>
+        <li><b>データと表示の分離</b>：単語リスト（<code>WORDS</code>）とUI描画を別々に書いています。これが基本。</li>
+        <li><b>状態管理</b>：<code>state</code>オブジェクトに「今どのレベルか／何問目か／正解数は」を集約。Reactなどでも同じ考え方です。</li>
+        <li><b>次のステップ</b>：このアプリを改造してReact/TypeScriptで書き直すと、モダンフロントの練習に最適。</li>
+      </ul>
+    </details>
+  </section>
+
+  <!-- クイズ -->
+  <section id="screen-quiz" class="card" style="display:none;">
+    <div class="meta">
+      <span id="levelLabel"></span>
+      <span id="qCount"></span>
+    </div>
+    <div class="progress"><div class="bar" id="bar"></div></div>
+    <div class="word" id="word">—</div>
+    <div class="hint" id="hint">この単語の品詞は？</div>
+    <div class="choices" id="choices"></div>
+    <div id="feedback" class="feedback"></div>
+    <div class="footer-btn">
+      <button class="btn ghost" onclick="goHome()">中断してホームへ</button>
+      <button class="btn primary" id="nextBtn" onclick="nextQuestion()" style="display:none;">次の問題 →</button>
+    </div>
+  </section>
+
+  <!-- 結果 -->
+  <section id="screen-result" class="card" style="display:none;">
+    <h2 style="margin-top:0;text-align:center;font-size:17px;" id="resultTitle">結果</h2>
+    <div class="score" id="scoreText">0 / 0</div>
+    <div class="stars" id="stars" style="justify-content:center;display:flex;margin-bottom:10px;"></div>
+    <p style="text-align:center;color:var(--muted);" id="resultMsg"></p>
+
+    <div class="review" id="reviewBox" style="display:none;">
+      <h3>間違えた単語の復習</h3>
+      <ul id="reviewList"></ul>
+    </div>
+
+    <div class="footer-btn">
+      <button class="btn ghost" onclick="goHome()">ホームに戻る</button>
+      <button class="btn primary" id="retryBtn" onclick="retrySame()">もう一度このレベル</button>
+    </div>
+    <div class="footer-btn" id="nextLevelBox" style="display:none;">
+      <button class="btn primary" onclick="goNextLevel()">次のレベルへ進む →</button>
+    </div>
+  </section>
+
+</div>
+
+<script>
+/* =========================================================
+   単語データ (品詞は最も一般的な用法)
+   POS: noun=名詞 / verb=動詞 / adjective=形容詞 / adverb=副詞 /
+        preposition=前置詞 / conjunction=接続詞 / pronoun=代名詞
+   ========================================================= */
+const POS_JA = {
+  noun:"名詞", verb:"動詞", adjective:"形容詞", adverb:"副詞",
+  preposition:"前置詞", conjunction:"接続詞", pronoun:"代名詞"
+};
+
+const LEVELS = [
+  {
+    id:"lv1", name:"初級", range:"~600点", desc:"基本語 + 品詞の基礎",
+    pool:["noun","verb","adjective","adverb","preposition","conjunction","pronoun"],
+    words:[
+      ["apple","noun"],["book","noun"],["house","noun"],["student","noun"],["water","noun"],
+      ["teacher","noun"],["city","noun"],["friend","noun"],
+      ["run","verb"],["eat","verb"],["walk","verb"],["read","verb"],["write","verb"],
+      ["speak","verb"],["listen","verb"],["open","verb"],
+      ["happy","adjective"],["big","adjective"],["small","adjective"],["beautiful","adjective"],
+      ["cold","adjective"],["kind","adjective"],
+      ["quickly","adverb"],["slowly","adverb"],["often","adverb"],["always","adverb"],["very","adverb"],
+      ["in","preposition"],["on","preposition"],["under","preposition"],["with","preposition"],["between","preposition"],
+      ["and","conjunction"],["but","conjunction"],["or","conjunction"],["because","conjunction"],
+      ["she","pronoun"],["they","pronoun"],["we","pronoun"],["it","pronoun"]
+    ]
+  },
+  {
+    id:"lv2", name:"中級", range:"600~700点", desc:"ビジネス基本語",
+    pool:["noun","verb","adjective","adverb"],
+    words:[
+      ["office","noun"],["customer","noun"],["meeting","noun"],["company","noun"],
+      ["employee","noun"],["department","noun"],["schedule","noun"],["service","noun"],
+      ["product","noun"],["report","noun"],
+      ["arrive","verb"],["provide","verb"],["receive","verb"],["develop","verb"],
+      ["require","verb"],["prepare","verb"],["contact","verb"],["attend","verb"],
+      ["explain","verb"],["complete","verb"],
+      ["available","adjective"],["important","adjective"],["helpful","adjective"],
+      ["convenient","adjective"],["successful","adjective"],["responsible","adjective"],
+      ["similar","adjective"],["popular","adjective"],
+      ["carefully","adverb"],["usually","adverb"],["recently","adverb"],["finally","adverb"],
+      ["currently","adverb"],["especially","adverb"],["probably","adverb"],["easily","adverb"]
+    ]
+  },
+  {
+    id:"lv3", name:"中上級", range:"700~800点", desc:"実践ビジネス語彙",
+    pool:["noun","verb","adjective","adverb"],
+    words:[
+      ["colleague","noun"],["invoice","noun"],["revenue","noun"],["warranty","noun"],
+      ["inventory","noun"],["supplier","noun"],["deadline","noun"],["feedback","noun"],
+      ["agreement","noun"],["expense","noun"],
+      ["establish","verb"],["negotiate","verb"],["maintain","verb"],["purchase","verb"],
+      ["approve","verb"],["expand","verb"],["reduce","verb"],["assign","verb"],
+      ["recommend","verb"],["organize","verb"],
+      ["reliable","adjective"],["reasonable","adjective"],["competitive","adjective"],
+      ["significant","adjective"],["flexible","adjective"],["efficient","adjective"],
+      ["sufficient","adjective"],["temporary","adjective"],
+      ["efficiently","adverb"],["immediately","adverb"],["gradually","adverb"],
+      ["accordingly","adverb"],["precisely","adverb"],["extremely","adverb"],
+      ["regularly","adverb"],["considerably","adverb"]
+    ]
+  },
+  {
+    id:"lv4", name:"上級", range:"800~900点", desc:"Part 5/6 頻出の難語",
+    pool:["noun","verb","adjective","adverb"],
+    words:[
+      ["acquisition","noun"],["compliance","noun"],["initiative","noun"],["endorsement","noun"],
+      ["collateral","noun"],["subsidiary","noun"],["discrepancy","noun"],["proponent","noun"],
+      ["itinerary","noun"],["prospect","noun"],
+      ["implement","verb"],["facilitate","verb"],["delegate","verb"],["consolidate","verb"],
+      ["mitigate","verb"],["allocate","verb"],["designate","verb"],["diversify","verb"],
+      ["expedite","verb"],["streamline","verb"],
+      ["comprehensive","adjective"],["preliminary","adjective"],["sophisticated","adjective"],
+      ["lucrative","adjective"],["viable","adjective"],["eligible","adjective"],
+      ["tentative","adjective"],["prominent","adjective"],
+      ["thoroughly","adverb"],["substantially","adverb"],["consequently","adverb"],
+      ["meticulously","adverb"],["inevitably","adverb"],["promptly","adverb"],
+      ["markedly","adverb"],["solely","adverb"]
+    ]
+  },
+  {
+    id:"lv5", name:"最上級", range:"900点~", desc:"満点レベルの高難度語",
+    pool:["noun","verb","adjective","adverb"],
+    words:[
+      ["contingency","noun"],["paradigm","noun"],["stipulation","noun"],["prerogative","noun"],
+      ["quintessence","noun"],["caveat","noun"],["precedent","noun"],["nuance","noun"],
+      ["fortitude","noun"],["tenacity","noun"],
+      ["proliferate","verb"],["scrutinize","verb"],["reconcile","verb"],["disseminate","verb"],
+      ["circumvent","verb"],["corroborate","verb"],["delineate","verb"],["exacerbate","verb"],
+      ["refurbish","verb"],["culminate","verb"],
+      ["ubiquitous","adjective"],["meticulous","adjective"],["inherent","adjective"],
+      ["stringent","adjective"],["innocuous","adjective"],["pragmatic","adjective"],
+      ["ambiguous","adjective"],["resilient","adjective"],
+      ["hitherto","adverb"],["conspicuously","adverb"],["inadvertently","adverb"],
+      ["seamlessly","adverb"],["ostensibly","adverb"],["invariably","adverb"],
+      ["purportedly","adverb"],["vehemently","adverb"]
+    ]
+  }
+];
+
+// 品詞のヒント（接尾辞）
+const POS_TIP = {
+  noun:"語尾が -tion, -ment, -ness, -ity, -er/or, -ist などが多い",
+  verb:"語尾が -ize, -ify, -ate, -en などが多い",
+  adjective:"語尾が -ful, -ous, -ive, -al, -ic, -able, -ant/ent などが多い",
+  adverb:"語尾が -ly が多い（friendly, lovely は例外で形容詞）",
+  preposition:"名詞の前に置いて位置・時間・関係を示す語",
+  conjunction:"語と語・文と文をつなぐ語",
+  pronoun:"名詞の代わりをする語"
+};
+
+/* =========================================================
+   状態管理
+   ========================================================= */
+const QUESTIONS_PER_SET = 10;
+
+const state = {
+  levelIndex: 0,
+  questionIndex: 0,
+  correct: 0,
+  questions: [],     // 今回出題する問題配列
+  wrong: [],         // 間違えた問題
+  answered: false
+};
+
+// 進捗（各レベルのベストスコア %）
+function loadProgress(){
+  try {
+    const raw = localStorage.getItem("pos_quiz_progress_v1");
+    return raw ? JSON.parse(raw) : {};
+  } catch(e){ return {}; }
+}
+function saveProgress(p){
+  try { localStorage.setItem("pos_quiz_progress_v1", JSON.stringify(p)); } catch(e){}
+}
+let progress = loadProgress();
+
+/* =========================================================
+   画面遷移
+   ========================================================= */
+function show(id){
+  ["screen-home","screen-quiz","screen-result"].forEach(s=>{
+    document.getElementById(s).style.display = (s===id)?"block":"none";
+  });
+  window.scrollTo({top:0, behavior:"smooth"});
+}
+
+function goHome(){
+  renderLevels();
+  show("screen-home");
+}
+
+/* =========================================================
+   レベル選択画面
+   ========================================================= */
+function renderLevels(){
+  const list = document.getElementById("levelList");
+  list.innerHTML = "";
+  LEVELS.forEach((lv, i)=>{
+    const unlocked = (i===0) || (progress[LEVELS[i-1].id] && progress[LEVELS[i-1].id] >= 70);
+    const cleared = progress[lv.id] && progress[lv.id] >= 70;
+    const btn = document.createElement("button");
+    btn.className = "level-btn" + (unlocked?"":" locked") + (cleared?" cleared":"");
+    btn.innerHTML = `
+      <span class="lv">LEVEL ${i+1} / ${lv.range}</span>
+      <span class="title">${lv.name}</span>
+      <div class="desc">${lv.desc}</div>
+      ${progress[lv.id]!==undefined?`<div class="desc" style="color:var(--accent);">ベスト: ${progress[lv.id]}%</div>`:""}
+    `;
+    if(!unlocked){
+      btn.title = "前のレベルで70%以上クリアで解放";
+      btn.onclick = ()=>{ alert("前のレベルで70%以上をクリアすると解放されます。"); };
+    } else {
+      btn.onclick = ()=> startLevel(i);
+    }
+    list.appendChild(btn);
+  });
+}
+
+/* =========================================================
+   クイズ開始
+   ========================================================= */
+function shuffle(arr){
+  const a = arr.slice();
+  for(let i=a.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [a[i],a[j]] = [a[j],a[i]];
+  }
+  return a;
+}
+
+function buildQuestions(level){
+  const shuffled = shuffle(level.words).slice(0, QUESTIONS_PER_SET);
+  return shuffled.map(([word, pos])=>{
+    // 選択肢: 正解 + このレベルのpoolからランダムに不正解3つ
+    const wrongPool = level.pool.filter(p=>p!==pos);
+    const wrongs = shuffle(wrongPool).slice(0, Math.min(3, wrongPool.length));
+    const choices = shuffle([pos, ...wrongs]);
+    return { word, pos, choices };
+  });
+}
+
+function startLevel(i){
+  state.levelIndex = i;
+  state.questionIndex = 0;
+  state.correct = 0;
+  state.wrong = [];
+  state.questions = buildQuestions(LEVELS[i]);
+  renderQuestion();
+  show("screen-quiz");
+}
+
+/* =========================================================
+   問題表示
+   ========================================================= */
+function renderQuestion(){
+  state.answered = false;
+  const level = LEVELS[state.levelIndex];
+  const q = state.questions[state.questionIndex];
+
+  document.getElementById("levelLabel").textContent = `${level.name}（${level.range}）`;
+  document.getElementById("qCount").textContent = `${state.questionIndex+1} / ${state.questions.length}`;
+  document.getElementById("bar").style.width = ((state.questionIndex)/state.questions.length*100) + "%";
+  document.getElementById("word").textContent = q.word;
+  document.getElementById("hint").textContent = "この単語の品詞は？";
+
+  const choicesEl = document.getElementById("choices");
+  choicesEl.innerHTML = "";
+  q.choices.forEach(c=>{
+    const btn = document.createElement("button");
+    btn.className = "choice";
+    btn.innerHTML = `<b>${POS_JA[c]}</b><span class="pos-ja">${c}</span>`;
+    btn.onclick = ()=> answer(c, btn);
+    choicesEl.appendChild(btn);
+  });
+
+  const fb = document.getElementById("feedback");
+  fb.className = "feedback";
+  fb.innerHTML = "";
+  document.getElementById("nextBtn").style.display = "none";
+}
+
+function answer(chosen, btn){
+  if(state.answered) return;
+  state.answered = true;
+  const q = state.questions[state.questionIndex];
+  const isOK = chosen === q.pos;
+
+  // 全ボタン無効化＋正解/不正解を色で
+  document.querySelectorAll(".choice").forEach(b=>{
+    b.disabled = true;
+    const label = b.querySelector(".pos-ja").textContent;
+    if(label === q.pos) b.classList.add("correct");
+    else if(b===btn && !isOK) b.classList.add("wrong");
+  });
+
+  const fb = document.getElementById("feedback");
+  if(isOK){
+    state.correct++;
+    fb.className = "feedback ok show";
+    fb.innerHTML = `<b>正解！</b> <code>${q.word}</code> は <b>${POS_JA[q.pos]}</b> です。<small>💡 ${POS_TIP[q.pos]}</small>`;
+  } else {
+    state.wrong.push({word:q.word, pos:q.pos, chose:chosen});
+    fb.className = "feedback ng show";
+    fb.innerHTML = `<b>不正解</b> 正解は <b>${POS_JA[q.pos]}</b> でした。<small>💡 ${POS_TIP[q.pos]}</small>`;
+  }
+
+  document.getElementById("bar").style.width = ((state.questionIndex+1)/state.questions.length*100) + "%";
+  document.getElementById("nextBtn").style.display = "block";
+  document.getElementById("nextBtn").textContent = (state.questionIndex+1 >= state.questions.length) ? "結果を見る →" : "次の問題 →";
+}
+
+function nextQuestion(){
+  state.questionIndex++;
+  if(state.questionIndex >= state.questions.length){
+    showResult();
+  } else {
+    renderQuestion();
+  }
+}
+
+/* =========================================================
+   結果画面
+   ========================================================= */
+function showResult(){
+  const total = state.questions.length;
+  const pct = Math.round(state.correct/total*100);
+  const level = LEVELS[state.levelIndex];
+
+  // 進捗保存（ベスト更新時のみ）
+  const prev = progress[level.id] || 0;
+  if(pct > prev){
+    progress[level.id] = pct;
+    saveProgress(progress);
+  }
+
+  document.getElementById("resultTitle").textContent = `${level.name}（${level.range}）の結果`;
+  document.getElementById("scoreText").textContent = `${state.correct} / ${total}  （${pct}%）`;
+
+  // ★評価
+  const stars = pct>=90?5:pct>=80?4:pct>=70?3:pct>=50?2:1;
+  document.getElementById("stars").textContent = "★".repeat(stars) + "☆".repeat(5-stars);
+
+  let msg = "";
+  if(pct===100) msg = "完璧！このレベルは完全に攻略しました。";
+  else if(pct>=90) msg = "素晴らしい！品詞の感覚がしっかり身についています。";
+  else if(pct>=70) msg = "合格！次のレベルに進めます。";
+  else if(pct>=50) msg = "もう一歩。間違えた単語の語尾を意識してもう一度。";
+  else msg = "まずは接尾辞ルール（-tion, -ly, -ive 等）を確認しよう。";
+  document.getElementById("resultMsg").textContent = msg;
+
+  // 復習リスト
+  const reviewBox = document.getElementById("reviewBox");
+  const reviewList = document.getElementById("reviewList");
+  if(state.wrong.length){
+    reviewBox.style.display = "block";
+    reviewList.innerHTML = "";
+    state.wrong.forEach(w=>{
+      const li = document.createElement("li");
+      li.innerHTML = `<span><b>${w.word}</b></span><span>正:${POS_JA[w.pos]} / 選:${POS_JA[w.chose]}</span>`;
+      reviewList.appendChild(li);
+    });
+  } else {
+    reviewBox.style.display = "none";
+  }
+
+  // 次のレベルボタン表示判定
+  const nextBox = document.getElementById("nextLevelBox");
+  if(pct >= 70 && state.levelIndex < LEVELS.length-1){
+    nextBox.style.display = "flex";
+  } else {
+    nextBox.style.display = "none";
+  }
+
+  show("screen-result");
+}
+
+function retrySame(){
+  startLevel(state.levelIndex);
+}
+function goNextLevel(){
+  startLevel(state.levelIndex + 1);
+}
+
+/* 初期化 */
+renderLevels();
+</script>
+</body>
+</html>
